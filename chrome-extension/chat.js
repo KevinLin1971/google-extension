@@ -3,6 +3,7 @@
 
 // 後端 API 設定
 const API_BASE_URL = 'http://localhost:8000';
+const API_V1_PREFIX = '/api/v1';
 
 // DOM 元素
 let chatMessages;

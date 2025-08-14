@@ -43,6 +43,9 @@ function redirectToLogin(message = 'Token 已過期，請重新登入') {
   }
 }
 
+// 導向登入頁的函數
+function redirectToLogin(message = 'Token 已過期，請重新登入') {
+
 // 初始化頁面
 async function initializePage() {
   const loginSection = document.getElementById('loginSection');
@@ -97,9 +100,6 @@ document.getElementById('loginButton').addEventListener('click', async () => {
     // 登入成功，儲存 token 和用戶名稱
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('username', username);
-    const loginSection = document.getElementById('loginSection');
-    const mainSection = document.getElementById('mainSection');
-    const userAvatarSection = document.getElementById('userAvatarSection');
     loginSection.classList.add('hidden');
     mainSection.classList.remove('hidden');
     userAvatarSection.classList.remove('hidden');
