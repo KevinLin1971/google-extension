@@ -27,3 +27,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         raise credentials_exception
     
     return {"username": username}
+
+
+async def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
+    """驗證 JWT 令牌並返回用戶資訊"""
+    return await get_current_user(token)

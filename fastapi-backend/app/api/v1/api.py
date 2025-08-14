@@ -3,7 +3,7 @@ API v1 路由聚合
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, items
+from app.api.v1.endpoints import auth, items, chatbot
 
 api_router = APIRouter()
 
@@ -12,3 +12,6 @@ api_router.include_router(auth.router, prefix="/auth", tags=["認證"])
 
 # 項目管理路由
 api_router.include_router(items.router, prefix="/items", tags=["項目管理"])
+
+# 聊天機器人路由
+api_router.include_router(chatbot.router, prefix="/chatbot", tags=["聊天機器人"])

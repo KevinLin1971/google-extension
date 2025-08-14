@@ -14,7 +14,7 @@ class Settings:
     # JWT 設定
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your_secret_key")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))  # 延長到 2 小時
     
     # 示範用戶設定
     DEMO_USERNAME: str = os.getenv("DEMO_USERNAME", "admin")
@@ -30,6 +30,9 @@ class Settings:
     # API 設定
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Chrome Extension Backend API"
+    
+    # Chat Bot 設定
+    CHAT_BOT_URL: str = os.getenv("CHAT_BOT_URL", "https://n8n.rone.tw/webhook-test/ai-chat")
 
 
 settings = Settings()
