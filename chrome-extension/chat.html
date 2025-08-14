@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聊天室 - 網頁資料溝通器</title>
+  <script src="chat.js" defer></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      width: 320px;
+      height: 600px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    .chat-header {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    
+    .back-button {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 18px;
+    }
+    
+    .back-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+    
+    .chat-title {
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    
+    .chat-status {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(5px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.4;
+      position: relative;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .message.assistant {
+      align-self: flex-start;
+      background: white;
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .message-time {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 4px;
+      display: block;
+    }
+    
+    .welcome-message {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      padding: 20px;
+      margin: auto;
+    }
+    
+    .welcome-message .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    
+    .chat-input-area {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 15px;
+      flex-shrink: 0;
+    }
+    
+    .input-container {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    
+    .chat-input {
+      flex: 1;
+      background: white;
+      border: none;
+      border-radius: 20px;
+      padding: 12px 16px;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      min-height: 20px;
+      max-height: 80px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .chat-input:focus {
+      box-shadow: 0 2px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .send-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .send-button:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .send-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      max-width: 80px;
+    }
+    
+    .typing-dots {
+      display: flex;
+      gap: 3px;
+    }
+    
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #667eea;
+      animation: typingAnimation 1.4s infinite ease-in-out both;
+    }
+    
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    .typing-dot:nth-child(3) { animation-delay: 0s; }
+    
+    @keyframes typingAnimation {
+      0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
+    /* 滾動條樣式 */
+    .chat-messages::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    
+    @media (max-width: 350px) {
+      body {
+        width: 100%;
+        left: 0;
+        transform: none;
+      }
+      
+      .chat-header {
+        padding: 12px 15px;
+      }
+      
+      .chat-messages {
+        padding: 12px;
+      }
+      
+      .chat-input-area {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-header">
+    <button class="back-button" id="backButton">←</button>
+    <div class="chat-title">💬 智能助手</div>
+    <div class="chat-status" id="chatStatus">準備就緒</div>
+  </div>
+  
+  <div class="chat-messages" id="chatMessages">
+    <div class="welcome-message">
+      <span class="icon">🤖</span>
+      <div>歡迎使用智能聊天助手！<br>我是您的專屬 AI 助理，隨時為您服務。</div>
+    </div>
+    
+    <!-- 打字指示器 -->
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="typing-dots">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="chat-input-area">
+    <div class="input-container">
+      <textarea 
+        class="chat-input" 
+        id="chatInput" 
+        placeholder="輸入您的訊息..." 
+        rows="1"
+        maxlength="1000"
+      ></textarea>
+      <button class="send-button" id="sendButton">
+        📤
+      </button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Web Data Communicator",
+  "version": "1.0",
+  "description": "協助使用者將網頁資料與後端系統溝通",
+  "permissions": ["storage", "activeTab", "scripting", "sidePanel"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "host_permissions": [
+    "https://*/*", 
+    "http://*/*",
+    "http://localhost:8000/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["main.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "side_panel": {
+    "default_path": "side-panel.html"
+  }
+}

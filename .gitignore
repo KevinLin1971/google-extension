@@ -1,0 +1,35 @@
+# Python
+fastapi-backend/__pycache__/
+fastapi-backend/*.pyc
+fastapi-backend/.env
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Node/Chrome Extension
+chrome-extension/node_modules/
+chrome-extension/dist/
+
+# Logs
+*.log
+
+# Others
+*.swp
+*.swo
+
+# Ignore backend virtual environments
+fastapi-backend/venv/
+
+# Ignore OS/Editor temp files
+*~
+.idea/
+
+# Ignore package lock files (if any)
+package-lock.json
+yarn.lock
+
+# Ignore Chrome Extension build artifacts
+chrome-extension/*.zip

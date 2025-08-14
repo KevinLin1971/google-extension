@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Main Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+    .content {
+      flex: 1;
+      padding: 20px;
+    }
+    .side-panel {
+      width: 300px;
+      border-left: 1px solid #ccc;
+      background-color: #fff;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .container {
+      text-align: center;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    @media (max-width: 600px) {
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <div class="container">
+      <div id="loginSection">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button id="loginButton">Login</button>
+      </div>
+      <div id="mainSection" class="hidden">
+        <h1>Welcome!</h1>
+        <button id="actionButton">Click Me</button>
+      </div>
+    </div>
+  </div>
+  <div class="side-panel">
+    <iframe src="popup/popup.html"></iframe>
+  </div>
+  <script>
+    // 檢查 token 是否存在
+    const token = localStorage.getItem('token');
+    const loginSection = document.getElementById('loginSection');
+    const mainSection = document.getElementById('mainSection');
+
+    if (token) {
+      loginSection.classList.add('hidden');
+      mainSection.classList.remove('hidden');
+    }
+
+    // 登入邏輯
+    document.getElementById('loginButton').addEventListener('click', () => {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      if (username && password) {
+        // 模擬 token 儲存
+        localStorage.setItem('token', 'sampleToken');
+        loginSection.classList.add('hidden');
+        mainSection.classList.remove('hidden');
+      } else {
+        alert('Please enter username and password');
+      }
+    });
+
+    // 主頁面按鈕邏輯
+    document.getElementById('actionButton').addEventListener('click', () => {
+      alert('Button clicked!');
+    });
+  </script>
+</body>
+</html>
