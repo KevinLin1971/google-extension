@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
     backButton = document.getElementById('backButton');
     typingIndicator = document.getElementById('typingIndicator');
     chatStatus = document.getElementById('chatStatus');
+    const clearButton = document.getElementById('clearButton');
+    if (clearButton) {
+        clearButton.addEventListener('click', clearChatHistory);
+    }
     
     // 檢查登入狀態
     checkAuthStatus();
@@ -42,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 檢查認證狀態
-function checkAuthStatus() {
+async function checkAuthStatus() {
     const token = localStorage.getItem('token');
     if (!token) {
         alert('請先登入再使用聊天功能');
@@ -50,8 +54,27 @@ function checkAuthStatus() {
         return;
     }
     
-    // 更新狀態為已連接
-    updateChatStatus('已連線', 'success');
+    try {
+        // 驗證 token 有效性
+        await window.ApiConfig.API.auth.verifyToken();
+        // 更新狀態為已連接
+        updateChatStatus('已連線', 'success');
+    } catch (error) {
+        console.error('Token verification error:', error);
+        
+        if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+            console.warn('Token 已過期，返回主頁面重新登入');
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            alert('登入已過期，請重新登入');
+            goBackToMain();
+        } else if (error.message.includes('Network connection failed')) {
+            console.warn('無法連接到後端服務器，但允許繼續使用聊天功能');
+            updateChatStatus('連線不穩定', 'warning');
+        } else {
+            updateChatStatus('連線異常', 'error');
+        }
+    }
 }
 
 // 綁定事件監聽器
@@ -128,8 +151,8 @@ async function sendMessage() {
     updateChatStatus('AI 回應中...', 'processing');
     
     try {
-        // 模擬 API 調用（等 UI/UX 設計完成後再串接實際 API）
-        const response = await simulateAIResponse(message);
+        // 調用實際的後端 API
+        const response = await callChatAPI(message);
         
         // 隱藏打字指示器
         hideTypingIndicator();
@@ -146,6 +169,13 @@ async function sendMessage() {
     } catch (error) {
         console.error('Send message error:', error);
         hideTypingIndicator();
+        
+        // 如果是認證失敗，不顯示錯誤訊息，因為已經重導向登入頁面了
+        if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+            // authenticatedFetch 或 checkAuthStatus 已經處理了重導向
+            return;
+        }
+        
         addMessage('抱歉，目前無法處理您的訊息，請稍後再試。', 'assistant', true);
         updateChatStatus('發生錯誤', 'error');
     }
@@ -174,10 +204,10 @@ function addMessage(content, sender, isError = false) {
         <span class="message-time">${timestamp}</span>
     `;
     
-    // 插入到歡迎訊息之後，打字指示器之前
-    const welcomeMessage = chatMessages.querySelector('.welcome-message');
-    if (welcomeMessage && welcomeMessage.nextSibling) {
-        chatMessages.insertBefore(messageDiv, welcomeMessage.nextSibling);
+    // 永遠插入在打字指示器之前，確保訊息順序正確
+    const typingIndicatorEl = chatMessages.querySelector('.typing-indicator');
+    if (typingIndicatorEl) {
+        chatMessages.insertBefore(messageDiv, typingIndicatorEl);
     } else {
         chatMessages.appendChild(messageDiv);
     }
@@ -231,6 +261,9 @@ function updateChatStatus(text, type = 'ready') {
         case 'processing':
             chatStatus.style.background = 'rgba(255, 193, 7, 0.2)';
             break;
+        case 'warning':
+            chatStatus.style.background = 'rgba(255, 152, 0, 0.2)';
+            break;
         case 'error':
             chatStatus.style.background = 'rgba(220, 53, 69, 0.2)';
             break;
@@ -239,7 +272,41 @@ function updateChatStatus(text, type = 'ready') {
     }
 }
 
-// 模擬 AI 回應（等 UI/UX 設計完成後替換為實際 API）
+// 調用聊天機器人 API
+async function callChatAPI(message) {
+    const apiUrl = `${API_BASE_URL}${API_V1_PREFIX}/chatbot/chat`;
+    
+    try {
+        const response = await window.ApiConfig.authenticatedFetch(apiUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+                message: message
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.response) {
+            return data.response;
+        } else {
+            throw new Error('API 回應格式錯誤');
+        }
+        
+    } catch (error) {
+        console.error('Chat API error:', error);
+        
+        // 如果是認證失敗，不需要繼續處理，因為 authenticatedFetch 已經處理了
+        if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+            throw error; // 重新拋出錯誤，讓調用者處理
+        }
+        
+        // 如果 API 調用失敗，回退到模擬回應
+        console.log('API 調用失敗，使用模擬回應作為備用');
+        return await simulateAIResponse(message);
+    }
+}
+
+// 模擬 AI 回應（作為備用方案）
 async function simulateAIResponse(userMessage) {
     // 模擬網路延遲
     await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
@@ -299,34 +366,6 @@ function clearChatHistory() {
         
         updateChatStatus('聊天記錄已清空', 'ready');
     }
-}
-
-// 帶有 token 驗證的 API 請求函數（為將來的 API 串接準備）
-async function authenticatedFetch(url, options = {}) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        throw new Error('No authentication token found');
-    }
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers
-    };
-
-    const response = await fetch(url, {
-        ...options,
-        headers
-    });
-
-    if (response.status === 401) {
-        // Token 過期，重導向到登入頁
-        alert('登入已過期，請重新登入');
-        goBackToMain();
-        throw new Error('Authentication failed');
-    }
-
-    return response;
 }
 
 // 導出函數供外部使用（如果需要的話）

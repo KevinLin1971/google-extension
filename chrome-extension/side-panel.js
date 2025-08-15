@@ -22,6 +22,13 @@ async function verifyToken() {
       return true; // 暫時返回 true，讓用戶界面正常顯示
     }
     
+    if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+      console.warn('Token 已過期或無效，清除本地儲存的 token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      return false;
+    }
+    
     return false;
   }
 }
@@ -132,7 +139,12 @@ document.addEventListener('click', async (e) => {
       console.log('Data retrieved:', data);
       alert('資料傳送成功！');
     } catch (error) {
-      if (!error.message.includes('Authentication failed')) {
+      console.error('Send data error:', error);
+      
+      if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+        console.warn('Token 已過期，重新導向登入頁面');
+        redirectToLogin('Token 已過期，請重新登入');
+      } else if (!error.message.includes('Network connection failed')) {
         alert('資料傳送失敗，請稍後再試');
       }
     }
@@ -149,9 +161,15 @@ document.addEventListener('click', async (e) => {
       if (isValid) {
         // 導向聊天室頁面
         window.location.href = 'chat.html';
+      } else {
+        console.warn('Token 驗證失敗，重新導向登入頁面');
+        redirectToLogin('Token 已過期或無效，請重新登入');
       }
     } catch (error) {
       console.error('Chat button error:', error);
+      if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+        redirectToLogin('Token 已過期，請重新登入');
+      }
     }
   }
 });

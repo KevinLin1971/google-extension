@@ -35,11 +35,16 @@ async function authenticatedFetch(endpoint, options = {}) {
   };
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+    
     const response = await fetch(url, {
       ...options,
       headers,
-      timeout: API_CONFIG.TIMEOUT
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (response.status === 401) {
       // Token 過期或無效
@@ -54,6 +59,9 @@ async function authenticatedFetch(endpoint, options = {}) {
 
     return response;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please check your network connection');
+    }
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
       throw new Error('Network connection failed - please check if the server is running');
     }
@@ -71,11 +79,16 @@ async function publicFetch(endpoint, options = {}) {
   };
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+    
     const response = await fetch(url, {
       ...options,
       headers,
-      timeout: API_CONFIG.TIMEOUT
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -84,6 +97,9 @@ async function publicFetch(endpoint, options = {}) {
 
     return response;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please check your network connection');
+    }
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
       throw new Error('Network connection failed - please check if the server is running');
     }
