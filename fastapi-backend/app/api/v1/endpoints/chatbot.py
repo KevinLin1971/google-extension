@@ -49,53 +49,63 @@ async def send_chat_message(
             "Content-Type": "application/json",
             "X-API-Key": settings.CHAT_BOT_AUTH_HEADER
         }
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(
-                settings.CHAT_BOT_URL,
-                json=payload,
-                headers=headers
-            )
-            # 檢查回應狀態
-            if response.status_code == 200:
-                try:
-                    bot_response = response.json()
-                except Exception:
-                    # 回應不是合法 JSON，回傳原始內容並標示錯誤
+        
+        # 先嘗試外部 API，但設定較短的超時時間
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:  # 短超時
+                response = await client.post(
+                    settings.CHAT_BOT_URL,
+                    json=payload,
+                    headers=headers
+                )
+                # 檢查回應狀態
+                if response.status_code == 200:
+                    try:
+                        bot_response = response.json()
+                    except Exception:
+                        # 回應不是合法 JSON，使用備用回應
+                        return await _get_fallback_response(chat_message.message)
+                    
+                    # 根據實際回應格式調整解析邏輯
+                    if isinstance(bot_response, dict):
+                        # 如果回應是字典格式，嘗試提取回應內容
+                        message_content = (
+                            bot_response.get("response") or 
+                            bot_response.get("message") or 
+                            bot_response.get("reply") or
+                            bot_response.get("content") or
+                            bot_response.get("output") or
+                            str(bot_response)
+                        )
+                    else:
+                        # 如果是字串格式
+                        message_content = str(bot_response)
+                    
                     return ChatResponse(
-                        response=f"外部 API 回傳非 JSON 格式，內容如下：{response}",
-                        status="error"
-                    )
-                # 根據實際回應格式調整解析邏輯
-                if isinstance(bot_response, dict):
-                    # 如果回應是字典格式，嘗試提取回應內容
-                    message_content = (
-                        bot_response.get("response") or 
-                        bot_response.get("message") or 
-                        bot_response.get("reply") or
-                        bot_response.get("content") or
-                        bot_response.get("output") or
-                        str(bot_response)
+                        response=message_content,
+                        status="success"
                     )
                 else:
-                    # 如果是字串格式
-                    message_content = str(bot_response)
-                return ChatResponse(
-                    response=message_content,
-                    status="success"
-                )
-            else:
-                # 當外部 API 不可用時，返回備用回應而不是拋出異常
-                return await _get_error_response(f"外部 API 狀態碼: {response.status_code}, 內容: {response.text}")
+                    # 外部 API 返回錯誤，使用備用回應
+                    print(f"外部 API 錯誤: {response.status_code}")
+                    return await _get_fallback_response(chat_message.message)
+        except Exception as e:
+            print(f"外部 API 調用失敗: {e}")
+            # 任何錯誤都使用備用回應
+            return await _get_fallback_response(chat_message.message)
                 
     except httpx.TimeoutException:
         # 超時時使用備用回應
+        print("外部 API 超時")
         return await _get_fallback_response(chat_message.message)
     except httpx.RequestError:
         # 連接錯誤時使用備用回應
-        return await _get_error_response(chat_message.message)
-    except Exception:
+        print("外部 API 連接錯誤")
+        return await _get_fallback_response(chat_message.message)
+    except Exception as e:
         # 其他錯誤時使用備用回應
-        return await _get_error_response(chat_message.message)
+        print(f"未預期錯誤: {e}")
+        return await _get_fallback_response(chat_message.message)
 
 
 async def _get_error_response(chat_message: str) -> ChatResponse:

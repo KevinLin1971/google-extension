@@ -176,8 +176,16 @@ async function sendMessage() {
             return;
         }
         
-        addMessage('抱歉，目前無法處理您的訊息，請稍後再試。', 'assistant', true);
-        updateChatStatus('發生錯誤', 'error');
+        // 如果是超時錯誤，顯示特定的錯誤訊息
+        let errorMessage = '抱歉，目前無法處理您的訊息，請稍後再試。';
+        if (error.message.includes('timeout') || error.message.includes('Request timeout')) {
+            errorMessage = '連線超時，請檢查網路連線或稍後再試。';
+            updateChatStatus('連線超時', 'error');
+        } else {
+            updateChatStatus('發生錯誤', 'error');
+        }
+        
+        addMessage(errorMessage, 'assistant', true);
     }
 }
 
@@ -274,33 +282,33 @@ function updateChatStatus(text, type = 'ready') {
 
 // 調用聊天機器人 API
 async function callChatAPI(message) {
-    const apiUrl = `${API_BASE_URL}${API_V1_PREFIX}/chatbot/chat`;
+    console.log('Calling Chat API with message:', message);
     
     try {
-        const response = await window.ApiConfig.authenticatedFetch(apiUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                message: message
-            })
-        });
-        
-        const data = await response.json();
+        // 方法 1：使用統一的 API 配置
+        const data = await window.ApiConfig.API.chatbot.chat(message);
+        console.log('API Response data:', data);
         
         if (data.status === 'success' && data.response) {
             return data.response;
         } else {
-            throw new Error('API 回應格式錯誤');
+            console.warn('API 回應格式錯誤:', data);
+            return "API 回應格式錯誤";
         }
-        
     } catch (error) {
         console.error('Chat API error:', error);
         
-        // 如果是認證失敗，不需要繼續處理，因為 authenticatedFetch 已經處理了
+        // 如果是認證失敗，重新拋出錯誤讓調用者處理
         if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
-            throw error; // 重新拋出錯誤，讓調用者處理
+            throw error;
         }
         
-        // 如果 API 調用失敗，回退到模擬回應
+        // 如果是超時錯誤，提供更友好的錯誤信息
+        if (error.message.includes('timeout') || error.name === 'AbortError') {
+            throw new Error('Request timeout - please check your network connection');
+        }
+        
+        // 其他錯誤，使用模擬回應作為備用
         console.log('API 調用失敗，使用模擬回應作為備用');
         return await simulateAIResponse(message);
     }

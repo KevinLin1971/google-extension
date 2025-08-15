@@ -5,7 +5,7 @@
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8000',
   V1_PREFIX: '/api/v1',
-  TIMEOUT: 10000, // 10 秒超時
+  TIMEOUT: 15000, // 15 秒超時 (合理的超時時間)
 };
 
 // 建構完整的 API URL
@@ -116,6 +116,11 @@ const API_ENDPOINTS = {
     VERIFY: '/auth/verify-token'
   },
   
+  // 聊天機器人
+  CHATBOT: {
+    CHAT: '/chatbot/chat'
+  },
+  
   // 項目管理
   ITEMS: {
     LIST: '/items/',
@@ -140,6 +145,17 @@ const API = {
     
     async verifyToken() {
       const response = await authenticatedFetch(API_ENDPOINTS.AUTH.VERIFY);
+      return response.json();
+    }
+  },
+
+  // 聊天機器人 API
+  chatbot: {
+    async chat(message) {
+      const response = await authenticatedFetch(API_ENDPOINTS.CHATBOT.CHAT, {
+        method: 'POST',
+        body: JSON.stringify({ message })
+      });
       return response.json();
     }
   },
