@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 測試</title>
+    <script src="api-config.js"></script>
+</head>
+<body>
+    <h1>API 測試頁面</h1>
+    
+    <div>
+        <button id="testLogin">測試登入</button>
+        <button id="testChat">測試聊天 API</button>
+        <button id="checkConfig">檢查 API 配置</button>
+    </div>
+    
+    <div id="results" style="margin-top: 20px; padding: 10px; background: #f0f0f0; white-space: pre-wrap;"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            console.log(message);
+            results.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+        
+        document.getElementById('checkConfig').addEventListener('click', function() {
+            log('檢查 API 配置...');
+            log('window.ApiConfig 存在: ' + !!window.ApiConfig);
+            if (window.ApiConfig) {
+                log('API_CONFIG: ' + JSON.stringify(window.ApiConfig.API_CONFIG, null, 2));
+                log('API.chatbot 存在: ' + !!(window.ApiConfig.API && window.ApiConfig.API.chatbot));
+                log('API.auth 存在: ' + !!(window.ApiConfig.API && window.ApiConfig.API.auth));
+            }
+        });
+        
+        document.getElementById('testLogin').addEventListener('click', async function() {
+            try {
+                log('開始測試登入...');
+                const response = await window.ApiConfig.API.auth.login('admin', '123456');
+                log('登入成功: ' + JSON.stringify(response, null, 2));
+                
+                if (response.access_token) {
+                    localStorage.setItem('token', response.access_token);
+                    log('Token 已儲存');
+                }
+            } catch (error) {
+                log('登入失敗: ' + error.message);
+            }
+        });
+        
+        document.getElementById('testChat').addEventListener('click', async function() {
+            try {
+                log('開始測試聊天 API...');
+                const response = await window.ApiConfig.API.chatbot.chat('測試訊息');
+                log('聊天 API 回應: ' + JSON.stringify(response, null, 2));
+            } catch (error) {
+                log('聊天 API 失敗: ' + error.message);
+            }
+        });
+        
+        // 頁面載入時檢查配置
+        window.addEventListener('load', function() {
+            log('頁面載入完成');
+            document.getElementById('checkConfig').click();
+        });
+    </script>
+</body>
+</html>

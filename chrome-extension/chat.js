@@ -18,7 +18,30 @@ let isTyping = false;
 
 // 初始化聊天室
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Chat room initialized');
+    console.log('🚀 Chat room initializing...');
+    
+    // 檢查 ApiConfig 是否已載入
+    if (!window.ApiConfig) {
+        console.error('❌ ApiConfig 未載入，等待載入中...');
+        // 延遲重試
+        setTimeout(function() {
+            if (!window.ApiConfig) {
+                console.error('❌ ApiConfig 載入失敗');
+                alert('API 配置載入失敗，請重新載入頁面');
+                return;
+            }
+            console.log('✅ ApiConfig 延遲載入成功');
+            initializeChat();
+        }, 1000);
+        return;
+    }
+    
+    console.log('✅ ApiConfig 已載入');
+    initializeChat();
+});
+
+function initializeChat() {
+    console.log('🔧 Initializing chat components...');
     
     // 獲取 DOM 元素
     chatMessages = document.getElementById('chatMessages');
@@ -32,6 +55,15 @@ document.addEventListener('DOMContentLoaded', function() {
         clearButton.addEventListener('click', clearChatHistory);
     }
     
+    console.log('🔍 DOM elements found:', {
+        chatMessages: !!chatMessages,
+        chatInput: !!chatInput,
+        sendButton: !!sendButton,
+        backButton: !!backButton,
+        typingIndicator: !!typingIndicator,
+        chatStatus: !!chatStatus
+    });
+    
     // 檢查登入狀態
     checkAuthStatus();
     
@@ -43,7 +75,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 載入歷史聊天記錄（如果有的話）
     loadChatHistory();
-});
+    
+    console.log('✅ Chat room initialized successfully');
+}
 
 // 檢查認證狀態
 async function checkAuthStatus() {
@@ -132,10 +166,18 @@ function goBackToMain() {
 
 // 發送訊息
 async function sendMessage() {
-    if (!chatInput || isTyping) return;
+    if (!chatInput || isTyping) {
+        console.log('⚠️ Cannot send message: chatInput missing or typing in progress');
+        return;
+    }
     
     const message = chatInput.value.trim();
-    if (!message) return;
+    if (!message) {
+        console.log('⚠️ Cannot send empty message');
+        return;
+    }
+    
+    console.log('📨 Sending message:', message);
     
     // 清空輸入框並重置高度
     chatInput.value = '';
@@ -151,14 +193,22 @@ async function sendMessage() {
     updateChatStatus('AI 回應中...', 'processing');
     
     try {
+        console.log('🔄 Calling API...');
         // 調用實際的後端 API
         const response = await callChatAPI(message);
+        console.log('📥 Received response:', response);
         
         // 隱藏打字指示器
         hideTypingIndicator();
         
-        // 添加 AI 回應到聊天記錄
-        addMessage(response, 'assistant');
+        if (response) {
+            // 添加 AI 回應到聊天記錄
+            addMessage(response, 'assistant');
+            console.log('✅ Message sent and response received successfully');
+        } else {
+            console.error('❌ Received empty response');
+            addMessage('抱歉，我沒有收到有效的回應。', 'assistant', true);
+        }
         
         // 更新狀態
         updateChatStatus('準備就緒', 'ready');
@@ -167,11 +217,12 @@ async function sendMessage() {
         saveChatHistory();
         
     } catch (error) {
-        console.error('Send message error:', error);
+        console.error('❌ Send message error:', error);
         hideTypingIndicator();
         
         // 如果是認證失敗，不顯示錯誤訊息，因為已經重導向登入頁面了
         if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+            console.log('🔑 Authentication failed, redirecting...');
             // authenticatedFetch 或 checkAuthStatus 已經處理了重導向
             return;
         }
@@ -282,34 +333,54 @@ function updateChatStatus(text, type = 'ready') {
 
 // 調用聊天機器人 API
 async function callChatAPI(message) {
-    console.log('Calling Chat API with message:', message);
+    console.log('🚀 Calling Chat API with message:', message);
+    
+    // 檢查 ApiConfig 是否已載入
+    if (!window.ApiConfig) {
+        console.error('❌ ApiConfig 未載入');
+        throw new Error('API configuration not loaded');
+    }
+    
+    if (!window.ApiConfig.API || !window.ApiConfig.API.chatbot || !window.ApiConfig.API.chatbot.chat) {
+        console.error('❌ Chatbot API 未定義');
+        throw new Error('Chatbot API not defined');
+    }
+    
+    console.log('✅ ApiConfig 已載入，開始調用 API...');
     
     try {
-        // 方法 1：使用統一的 API 配置
+        // 使用統一的 API 配置
         const data = await window.ApiConfig.API.chatbot.chat(message);
-        console.log('API Response data:', data);
+        console.log('📥 API Response received:', data);
         
-        if (data.status === 'success' && data.response) {
+        if (data && data.status === 'success' && data.response) {
+            console.log('✅ API 調用成功，返回回應:', data.response);
+            return data.response;
+        } else if (data && data.response) {
+            // 即使 status 不是 success，但有 response 就使用
+            console.log('⚠️ API 狀態異常但有回應:', data);
             return data.response;
         } else {
-            console.warn('API 回應格式錯誤:', data);
-            return "API 回應格式錯誤";
+            console.warn('❌ API 回應格式錯誤:', data);
+            throw new Error('Invalid API response format');
         }
     } catch (error) {
-        console.error('Chat API error:', error);
+        console.error('❌ Chat API error:', error);
         
         // 如果是認證失敗，重新拋出錯誤讓調用者處理
         if (error.message.includes('Authentication failed') || error.message.includes('token expired')) {
+            console.log('🔑 認證失敗，重新拋出錯誤');
             throw error;
         }
         
         // 如果是超時錯誤，提供更友好的錯誤信息
         if (error.message.includes('timeout') || error.name === 'AbortError') {
+            console.log('⏱️ 請求超時');
             throw new Error('Request timeout - please check your network connection');
         }
         
         // 其他錯誤，使用模擬回應作為備用
-        console.log('API 調用失敗，使用模擬回應作為備用');
+        console.log('🔄 API 調用失敗，使用模擬回應作為備用');
         return await simulateAIResponse(message);
     }
 }
