@@ -33,6 +33,7 @@ class Settings:
     
     # Chat Bot 設定
     CHAT_BOT_URL: str = os.getenv("CHAT_BOT_URL", "https://n8n.rone.tw/webhook-test/ai-chat")
+    CHAT_BOT_AUTH_HEADER: str = os.getenv("CHAT_BOT_AUTH_HEADER", "")
 
 
 settings = Settings()

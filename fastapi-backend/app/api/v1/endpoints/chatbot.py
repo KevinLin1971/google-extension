@@ -44,18 +44,27 @@ async def send_chat_message(
             "message": chat_message.message
         }
         
-        # 使用 httpx 發送 HTTP 請求到外部聊天機器人
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # 使用 httpx 發送 HTTP 請求到外部聊天機器人，帶上授權標頭
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-Key": settings.CHAT_BOT_AUTH_HEADER
+        }
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 settings.CHAT_BOT_URL,
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers=headers
             )
-            
             # 檢查回應狀態
             if response.status_code == 200:
-                bot_response = response.json()
-                
+                try:
+                    bot_response = response.json()
+                except Exception:
+                    # 回應不是合法 JSON，回傳原始內容並標示錯誤
+                    return ChatResponse(
+                        response=f"外部 API 回傳非 JSON 格式，內容如下：{response}",
+                        status="error"
+                    )
                 # 根據實際回應格式調整解析邏輯
                 if isinstance(bot_response, dict):
                     # 如果回應是字典格式，嘗試提取回應內容
@@ -63,29 +72,40 @@ async def send_chat_message(
                         bot_response.get("response") or 
                         bot_response.get("message") or 
                         bot_response.get("reply") or
+                        bot_response.get("content") or
+                        bot_response.get("output") or
                         str(bot_response)
                     )
                 else:
                     # 如果是字串格式
                     message_content = str(bot_response)
-                
                 return ChatResponse(
                     response=message_content,
                     status="success"
                 )
             else:
                 # 當外部 API 不可用時，返回備用回應而不是拋出異常
-                return await _get_fallback_response(chat_message.message)
+                return await _get_error_response(f"外部 API 狀態碼: {response.status_code}, 內容: {response.text}")
                 
     except httpx.TimeoutException:
         # 超時時使用備用回應
         return await _get_fallback_response(chat_message.message)
-    except httpx.RequestError as e:
+    except httpx.RequestError:
         # 連接錯誤時使用備用回應
-        return await _get_fallback_response(chat_message.message)
-    except Exception as e:
+        return await _get_error_response(chat_message.message)
+    except Exception:
         # 其他錯誤時使用備用回應
-        return await _get_fallback_response(chat_message.message)
+        return await _get_error_response(chat_message.message)
+
+
+async def _get_error_response(chat_message: str) -> ChatResponse:
+    """
+    當外部 AI API 發生錯誤時的回應
+    """
+    return ChatResponse(
+        response=f"抱歉，我無法處理您的請求：「{chat_message}」。請稍後再試。",
+        status="error"
+    )
 
 
 async def _get_fallback_response(user_message: str) -> ChatResponse:
@@ -130,13 +150,17 @@ async def chatbot_health_check():
         dict: 健康狀態資訊
     """
     try:
+        headers = {
+            "Content-Type": "application/json",
+            "authorize": settings.CHAT_BOT_AUTH_HEADER
+        }
         async with httpx.AsyncClient(timeout=10.0) as client:
             # 發送測試請求
             test_payload = {"message": "health check"}
             response = await client.post(
                 settings.CHAT_BOT_URL,
                 json=test_payload,
-                headers={"Content-Type": "application/json"}
+                headers=headers
             )
             
             return {
