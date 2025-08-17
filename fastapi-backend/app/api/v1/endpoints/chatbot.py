@@ -43,21 +43,21 @@ async def send_chat_message(
         payload = {
             "message": chat_message.message
         }
-        
         # 使用 httpx 發送 HTTP 請求到外部聊天機器人，帶上授權標頭
         headers = {
             "Content-Type": "application/json",
             "X-API-Key": settings.CHAT_BOT_AUTH_HEADER
         }
-        
-        # 先嘗試外部 API，但設定較短的超時時間
+       
+        # 先嘗試外部 API，設定較短的超時時間
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:  # 短超時
+            async with httpx.AsyncClient(timeout=settings.CHAT_BOT_TIMEOUT) as client:  # 短超時
                 response = await client.post(
                     settings.CHAT_BOT_URL,
                     json=payload,
                     headers=headers
                 )
+    
                 # 檢查回應狀態
                 if response.status_code == 200:
                     try:
@@ -65,7 +65,6 @@ async def send_chat_message(
                     except Exception:
                         # 回應不是合法 JSON，使用備用回應
                         return await _get_fallback_response(chat_message.message)
-                    
                     # 根據實際回應格式調整解析邏輯
                     if isinstance(bot_response, dict):
                         # 如果回應是字典格式，嘗試提取回應內容
@@ -80,7 +79,6 @@ async def send_chat_message(
                     else:
                         # 如果是字串格式
                         message_content = str(bot_response)
-                    
                     return ChatResponse(
                         response=message_content,
                         status="success"
@@ -90,7 +88,9 @@ async def send_chat_message(
                     print(f"外部 API 錯誤: {response.status_code}")
                     return await _get_fallback_response(chat_message.message)
         except Exception as e:
-            print(f"外部 API 調用失敗: {e}")
+            import traceback
+            print(f"外部 API 調用失敗: {repr(e)}")
+            traceback.print_exc()
             # 任何錯誤都使用備用回應
             return await _get_fallback_response(chat_message.message)
                 

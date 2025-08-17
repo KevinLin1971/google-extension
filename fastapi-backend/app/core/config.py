@@ -31,9 +31,11 @@ class Settings:
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Chrome Extension Backend API"
     
+
     # Chat Bot 設定
     CHAT_BOT_URL: str = os.getenv("CHAT_BOT_URL", "https://n8n.rone.tw/webhook-test/ai-chat")
     CHAT_BOT_AUTH_HEADER: str = os.getenv("CHAT_BOT_AUTH_HEADER", "")
+    CHAT_BOT_TIMEOUT: float = float(os.getenv("CHAT_BOT_TIMEOUT", "50.0"))
 
 
 settings = Settings()
