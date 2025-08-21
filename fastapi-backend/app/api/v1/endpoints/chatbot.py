@@ -39,35 +39,29 @@ async def send_chat_message(
         ChatResponse: 聊天機器人的回應
     """
     try:
-        # 準備發送到外部聊天機器人 API 的資料
         payload = {
             "message": chat_message.message
         }
-        # 使用 httpx 發送 HTTP 請求到外部聊天機器人，帶上授權標頭
         headers = {
             "Content-Type": "application/json",
             "X-API-Key": settings.CHAT_BOT_AUTH_HEADER
         }
-       
-        # 先嘗試外部 API，設定較短的超時時間
+
         try:
-            async with httpx.AsyncClient(timeout=settings.CHAT_BOT_TIMEOUT) as client:  # 短超時
+            async with httpx.AsyncClient(timeout=settings.CHAT_BOT_TIMEOUT) as client:
                 response = await client.post(
                     settings.CHAT_BOT_URL,
                     json=payload,
                     headers=headers
                 )
-    
-                # 檢查回應狀態
+
                 if response.status_code == 200:
                     try:
                         bot_response = response.json()
-                    except Exception:
-                        # 回應不是合法 JSON，使用備用回應
+                    except Exception as e:
+                        print(f"[DEBUG] 回應不是合法 JSON: {e}")
                         return await _get_fallback_response(chat_message.message)
-                    # 根據實際回應格式調整解析邏輯
                     if isinstance(bot_response, dict):
-                        # 如果回應是字典格式，嘗試提取回應內容
                         message_content = (
                             bot_response.get("response") or 
                             bot_response.get("message") or 
@@ -77,34 +71,30 @@ async def send_chat_message(
                             str(bot_response)
                         )
                     else:
-                        # 如果是字串格式
                         message_content = str(bot_response)
                     return ChatResponse(
                         response=message_content,
                         status="success"
                     )
                 else:
-                    # 外部 API 返回錯誤，使用備用回應
-                    print(f"外部 API 錯誤: {response.status_code}")
+                    print(f"[DEBUG] 外部 API 錯誤: {response.status_code}")
                     return await _get_fallback_response(chat_message.message)
         except Exception as e:
             import traceback
-            print(f"外部 API 調用失敗: {repr(e)}")
+            print(f"[DEBUG] 外部 API 調用失敗: {repr(e)}")
             traceback.print_exc()
-            # 任何錯誤都使用備用回應
             return await _get_fallback_response(chat_message.message)
-                
+
     except httpx.TimeoutException:
-        # 超時時使用備用回應
-        print("外部 API 超時")
+        print("[DEBUG] 外部 API 超時")
         return await _get_fallback_response(chat_message.message)
-    except httpx.RequestError:
-        # 連接錯誤時使用備用回應
-        print("外部 API 連接錯誤")
+    except httpx.RequestError as e:
+        print(f"[DEBUG] 外部 API 連接錯誤: {e}")
         return await _get_fallback_response(chat_message.message)
     except Exception as e:
-        # 其他錯誤時使用備用回應
-        print(f"未預期錯誤: {e}")
+        print(f"[DEBUG] 未預期錯誤: {e}")
+        import traceback
+        traceback.print_exc()
         return await _get_fallback_response(chat_message.message)
 
 
